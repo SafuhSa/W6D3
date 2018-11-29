@@ -86,30 +86,119 @@
 /************************************************************************/
 /******/ ({
 
+/***/ "./frontend/api_util.js":
+/*!******************************!*\
+  !*** ./frontend/api_util.js ***!
+  \******************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+const APIUtil = {
+
+  followUser: id => APIUtil.changeFollowStatus(id, 'POST'),
+
+  unfollowUser: id => APIUtil.changeFollowStatus(id, 'DELETE'),
+
+  changeFollowStatus: (id, method) => (
+    $.ajax({
+      url: `/users/${id}/follow`,
+      dataType: 'json',
+      method
+    })
+  ),
+
+  searchUsers: query => (
+    $.ajax({
+      url: '/users/search',
+      dataType: 'json',
+      method: 'GET',
+      data: { query }
+    })
+  ),
+
+  createTweet: data => (
+    $.ajax({
+      url: '/tweets',
+      method: 'POST',
+      dataType: 'json',
+      data
+    })
+  ),
+
+  fetchTweets: data => (
+    $.ajax({
+      url: '/feed',
+      method: 'GET',
+      dataType: 'json',
+      data
+    })
+  )
+};
+
+module.exports = APIUtil;
+
+/***/ }),
+
 /***/ "./frontend/follow_toggle.js":
 /*!***********************************!*\
   !*** ./frontend/follow_toggle.js ***!
   \***********************************/
 /*! no static exports found */
-/***/ (function(module, exports) {
+/***/ (function(module, exports, __webpack_require__) {
+
+const APIUtil = __webpack_require__(/*! ./api_util */ "./frontend/api_util.js");
 
 class FollowToggle {
   constructor(el, options) {
     this.$el = $(el);
     this.userId = this.$el.data('user-id') || options.userId;
     this.followState = (this.$el.data('2') || options.followState);
-  }
+    
+    this.render();
+    this.$el.on('click', this.handleClick.bind(this));
+   }
   
-  render () {
-    if (this.followState === 'unfollowed') {
-      this.$el.prop('disabled', false); // Add a property of disabled and set value to false
-      this.$el.html('Follow!');
+ 
+   render() {
+    switch (this.followState) {
+      case 'followed':
+        this.$el.prop('disabled', false);
+        this.$el.html('Unfollow!');
+        break;
+      case 'unfollowed':
+        this.$el.prop('disabled', false);
+        this.$el.html('Follow!');
+        break;
+      case 'following':
+        this.$el.prop('disabled', true);
+        this.$el.html('Following...');
+        break;
+      case 'unfollowing':
+        this.$el.prop('disabled', true);
+        this.$el.html('Unfollowing...');
+        break;
+      }
     }
-    else if (this.followState === 'followed')
-    this.$el.prop('disabled', false);
-    this.$el.html('Unfollow!');
+    
+    handleClick (event) {
+      preventDefault();
+      if (this.followState === 'followed') {
+        this.followState = 'unfollowing';
+        this.render();
+        APIUtil.unfollowUser(this.userId).then(() => {
+            followToggle.followState = 'unfollowed';
+            followToggle.render();
+          });
+        } if (this.followState === 'unfollowed') {
+          this.followState = 'following';
+          this.render();
+          APIUtil.followUser(this.userId).then(() => {
+            followToggle.followState = 'followed';
+            followToggle.render();
+            });
+          }
+        }
   }
-}
 
 module.exports = FollowToggle;
 
@@ -123,11 +212,18 @@ module.exports = FollowToggle;
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
-const Togglebutton = __webpack_require__(/*! ./follow_toggle */ "./frontend/follow_toggle.js");
+const FollowToggle = __webpack_require__(/*! ./follow_toggle */ "./frontend/follow_toggle.js");
+const InfiniteTweets = __webpack_require__(!(function webpackMissingModule() { var e = new Error("Cannot find module './infinite_tweets'"); e.code = 'MODULE_NOT_FOUND'; throw e; }()));
+const TweetCompose = __webpack_require__(!(function webpackMissingModule() { var e = new Error("Cannot find module './tweet_compose'"); e.code = 'MODULE_NOT_FOUND'; throw e; }()));
+const UsersSearch = __webpack_require__(!(function webpackMissingModule() { var e = new Error("Cannot find module './users_search'"); e.code = 'MODULE_NOT_FOUND'; throw e; }()));
 
 $(function () {
-  $('button.follow-toggle').each( (idx, button) => new FollowToggle(btn, {}) );
+  $('div.infinite-tweets').each( (i, tweet) => new InfiniteTweets(tweet) );
+  $('form.tweet-compose').each( (i, form) => new TweetCompose(form) );
+  $('.users-search').each( (i, search) => new UsersSearch(search) );
+  $('button.follow-toggle').each( (i, btn) => new FollowToggle(btn, {}) );
 });
+
 
 /***/ })
 
